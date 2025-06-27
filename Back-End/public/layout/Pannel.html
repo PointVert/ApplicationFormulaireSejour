@@ -1,0 +1,23 @@
+<div id="Pannel">
+    <header>Header</header>
+    <div id="left">left</div>
+    <div id="right">right</div>
+</div>
+<style>
+    #Pannel {
+        display: grid;
+        grid-template:
+            [header-left] "head head" 30px [header-right]
+            [main-left] "nav  main" 1fr [main-right]
+            / 120px 1fr;
+    }
+    header {
+        grid-area: head;
+    }
+    #left {
+        grid-area: nav;
+    }
+    #right {
+        grid-area: main;
+    }
+</style>

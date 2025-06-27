@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panneau Admin</title>
+    <script type="module" src="/components/layout-component.js"></script>
+    <script type="module" src="/components/navbar.js"></script>
+    <link rel="stylesheet" href="/css/default.css" />
+</head>
+<body>
+    <layout-component>
+        <h3 slot="header">Admin Pannel</h3>
+        <form-navbar slot="navbar"></form-navbar>
+        <div slot="content">
+            <form id="adminForm">
+                <label for="email">Email</label>
+                <input type="text" id="email" required />
+
+                <label for="password">Mot de Passe</label>
+                <input type="password" id="password" required />
+
+                <label for="role">Role</label>
+                <select id="role">
+                </select>
+                <button type="submit">Creer admin</button>
+                <div class="status" id="status"></div>
+            </form>
+            <h4>Utilisateurs existants</h4>
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Nouveau mot de passe</th>
+                        <th>Modifier</th>
+                        <th>Supprimer</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </layout-component>
+
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        }
+        document.getElementById('adminForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const roleId = document.getElementById('role').value;
+            console.log(roleId)
+            const res = await fetch('/api/register_admin', {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                    'Content-Type': 'application/json'
+                },
+                method: 'POST',
+                body: JSON.stringify({ email, password, roleId })
+            });
+
+            const result = await res.json();
+            const statusEl = document.getElementById('status');
+
+            if (res.ok) {
+                statusEl.style.color = 'green';
+                statusEl.textContent = 'Admin user created successfully.';
+                document.getElementById('adminForm').reset();
+            } else {
+                statusEl.style.color = 'red';
+                statusEl.textContent = result.error || 'Failed to create admin.';
+            }
+        });
+        async function loadRoles() {
+            try {
+                const res = await fetch('/api/role', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+                const roles = await res.json();
+                const select = document.getElementById('role');
+
+                roles.forEach(r => {
+                    const option = document.createElement('option');
+                    option.value = r.id;
+                    option.textContent = r.name;
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Erreur lors du chargement des rôles :', err);
+            }
+        }
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+                const users = await res.json();
+                const roles = await fetch('/api/role', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                }).then(r => r.json());
+
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '';
+
+                users.forEach(user => {
+                    const tr = document.createElement('tr');
+
+                    // Email
+                    const emailTd = document.createElement('td');
+                    emailTd.textContent = user.identifiant;
+
+                    // Select Role
+                    const roleTd = document.createElement('td');
+                    const roleSelect = document.createElement('select');
+                    roleSelect.dataset.userId = user.id;
+                    roles.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role.id;
+                        option.textContent = role.name;
+                        if (role.id === user.role_id) option.selected = true;
+                        roleSelect.appendChild(option);
+                    });
+                    roleTd.appendChild(roleSelect);
+
+                    // Password
+                    const passTd = document.createElement('td');
+                    const passInput = document.createElement('input');
+                    passInput.type = 'password';
+                    passInput.placeholder = 'Laisser vide pour ne pas changer';
+                    passInput.dataset.userId = user.id;
+                    passTd.appendChild(passInput);
+
+                    // Apply Button
+                    const applyTd = document.createElement('td');
+                    const applyBtn = document.createElement('button');
+                    applyBtn.textContent = 'Modifier';
+                    applyBtn.addEventListener('click', () => {
+                        const newRoleId = roleSelect.value;
+                        const newPassword = passInput.value;
+
+                        updateUser(user.id, newRoleId, newPassword);
+                    });
+                    applyTd.appendChild(applyBtn);
+                    // Delete Button
+                    const deleteTd = document.createElement('td');
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Supprimer';
+                    deleteBtn.addEventListener('click', async () => {
+                        if (confirm(`Supprimer l'utilisateur ${user.identifiant} ?`)) {
+                            const delRes = await fetch(`/api/users/${user.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                                }
+                            });
+                            if (delRes.ok) {
+                                loadUsers(); // Rafraîchir la liste
+                            } else {
+                                alert('Erreur lors de la suppression');
+                            }
+                        }
+                    });
+                    deleteTd.appendChild(deleteBtn);
+                    tr.append(emailTd, roleTd, passTd, applyTd, deleteTd);
+                    tbody.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error('Erreur chargement utilisateurs :', err);
+            }
+        }
+        async function updateUser(userId, roleId, newPassword) {
+            try {
+                const body = { roleId };
+                if (newPassword.trim() !== '') body.password = newPassword;
+
+                const res = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const result = await res.json();
+                    alert(result.error || 'Erreur mise à jour');
+                } else {
+                    alert('Utilisateur mis à jour');
+                    loadUsers();
+                }
+            } catch (err) {
+                console.error('Erreur mise à jour utilisateur :', err);
+            }
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            loadRoles();
+            loadUsers();
+        });
+    </script>
+</body>
+</html>

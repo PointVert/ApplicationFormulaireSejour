@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panneau Admin</title>
+    <script type="module" src="/components/layout-component.js"></script>
+    <script type="module" src="/components/navbar.js"></script>
+    <link rel="stylesheet" href="/css/default.css" />
+    <style>
+        .form-block {
+            margin-bottom: 1.5rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .form-title {
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .pdf-list {
+            margin-left: 1rem;
+            display: none;
+        }
+
+        .pdf-list a {
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+    </style>
+</head>
+<body>
+    <layout-component>
+        <h3 slot="header">Admin Pannel</h3>
+        <form-navbar slot="navbar"></form-navbar>
+        <div slot="content">
+            <h2>Liste des PDF par formulaire</h2>
+            <div id="pdfContainer"></div>
+        </div>
+    </layout-component>
+
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        }
+
+        async function loadPdfList() {
+            const container = document.getElementById('pdfContainer');
+
+            try {
+                const res = await fetch('/api/pdf/all', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+
+                data.forEach(form => {
+                    const block = document.createElement('div');
+                    block.className = 'form-block';
+
+                    const title = document.createElement('div');
+                    title.className = 'form-title';
+                    title.textContent = form.nom || form.id_formulaire || 'Formulaire';
+                    title.addEventListener('click', () => {
+                        pdfList.style.display = pdfList.style.display === 'none' ? 'block' : 'none';
+                    });
+
+                    const pdfList = document.createElement('div');
+                    pdfList.className = 'pdf-list';
+
+                    form.pdfs.forEach(file => {
+                        const link = document.createElement('a');
+                        link.href = `/pdf/${form.id_formulaire}/${file}`;
+                        link.textContent = file;
+                        link.target = '_blank';
+                        pdfList.appendChild(link);
+                    });
+
+                    block.appendChild(title);
+                    block.appendChild(pdfList);
+                    container.appendChild(block);
+                });
+
+            } catch (err) {
+                console.error('Erreur de chargement des PDF :', err);
+                container.innerHTML = '<p>Erreur de chargement.</p>';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadPdfList);
+    </script>
+</body>
+</html>

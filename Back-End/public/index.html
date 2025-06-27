@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panneau Admin</title>
+</head>
+<body>
+    <div id="main_content">
+
+    </div>
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

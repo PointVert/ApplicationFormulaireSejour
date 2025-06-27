@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panneau Admin</title>
+    <script type="module" src="/components/form-builder.js"></script>
+    <script type="module" src="/components/question-editor.js"></script>
+    <script type="module" src="/components/answer-editor.js"></script>
+    <script type="module" src="/components/layout-component.js"></script>
+    <script type="module" src="/components/navbar.js"></script>
+    <link rel="stylesheet" href="/css/default.css" />
+</head>
+<body>
+    <layout-component>
+        <h3 slot="header">Admin Pannel</h3>
+        <form-navbar slot="navbar"></form-navbar>
+        <form-builder slot="content"></form-builder>
+    </layout-component>
+
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

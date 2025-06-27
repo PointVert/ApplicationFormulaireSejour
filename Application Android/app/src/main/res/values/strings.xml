@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Point Vert Formulaire</string>
+    <string name="navigation_drawer_open">Ouvrir le menu</string>
+    <string name="navigation_drawer_close">Fermer le menu</string>
+</resources>

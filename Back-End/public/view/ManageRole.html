@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Panneau Admin</title>
+    <script type="module" src="/components/layout-component.js"></script>
+    <script type="module" src="/components/navbar.js"></script>
+    <link rel="stylesheet" href="/css/default.css" />
+</head>
+<body>
+    <layout-component>
+        <h3 slot="header">Admin Pannel</h3>
+        <form-navbar slot="navbar"></form-navbar>
+
+        <div slot="content">
+            <form id="roleForm">
+                <label for="role">Nom du role</label>
+                <input type="text" id="role" required /><br />
+
+                <label>Formulaires lies</label>
+                <div id="form-checkboxes"></div>
+
+                <button type="submit">Creer le role</button>
+                <div class="status" id="status"></div>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Role</th>
+                        <th>Nom</th>
+                        <th>Formulaire lie</th>
+                        <th>Supprimer</th>
+                        <th>Modifier</th>
+                    </tr>
+                </thead>
+                <tbody id="rolesTableBody"></tbody>
+            </table>
+        </div>
+    </layout-component>
+
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        }
+
+        const roleForm = document.getElementById('roleForm');
+        const formSelect = document.getElementById('form');
+        const statusEl = document.getElementById('status');
+        const tableBody = document.getElementById('rolesTableBody');
+        let forms;
+
+        roleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const role = document.getElementById('role').value.trim();
+
+            const checkboxes = document.querySelectorAll('#form-checkboxes input[type="checkbox"]:checked');
+            console.log(checkboxes)
+            const formIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            const res = await fetch('/api/role', {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                    'Content-Type': 'application/json'
+                },
+                method: 'POST',
+                body: JSON.stringify({ role, formIds })
+            });
+
+            const result = await res.json();
+            const statusEl = document.getElementById('status');
+
+            if (res.ok) {
+                statusEl.style.color = 'green';
+                statusEl.textContent = 'Role cree avec succes.';
+                document.getElementById('roleForm').reset();
+                loadFormsForRole(); // Recharge les checkboxes
+            } else {
+                statusEl.style.color = 'red';
+                statusEl.textContent = result.error || 'Echec de la creation du role.';
+            }
+        });
+
+        async function loadForms() {
+            const res = await fetch('/api/forms', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            });
+            forms = await res.json();
+
+            const container = document.getElementById('form-checkboxes');
+            container.innerHTML = '';
+
+            forms.forEach(form => {
+                const label = document.createElement('label');
+                label.style.display = 'block';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = form.identifiant_formulaire;
+
+                label.appendChild(checkbox);
+                label.append(` ${form.titre}`);
+                container.appendChild(label);
+            });
+            return forms;
+        }
+        async function updateRoleForms(roleId, formIds) {
+            try {
+                const res = await fetch(`/api/role/${roleId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ formIds })
+                });
+
+                const result = await res.json();
+                if (res.ok) {
+                    alert('Rôle mis à jour avec succès');
+                    await loadRoles();
+                } else {
+                    alert(result.error || 'Erreur lors de la mise à jour du rôle');
+                }
+            } catch (err) {
+                console.error('Erreur update role:', err);
+            }
+        }
+
+        async function deleteRole(roleId) {
+            if (!confirm('Voulez-vous vraiment supprimer ce rôle ?')) return;
+
+            try {
+                const res = await fetch(`/api/role/${roleId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const result = await res.json();
+                if (res.ok) {
+                    alert('Rôle supprimé');
+                    await loadRoles();
+                } else {
+                    alert(result.error || 'Erreur lors de la suppression');
+                }
+            } catch (err) {
+                console.error('Erreur suppression role:', err);
+            }
+        }
+        async function loadRoles() {
+            const res = await fetch('/api/role', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            });
+            const roles = await res.json();
+            tableBody.innerHTML = '';
+
+            roles.forEach(role => {
+                const row = document.createElement('tr');
+
+                // ID
+                row.innerHTML += `<td>${role.id}</td>`;
+
+                // Nom du role (lecture seule)
+                row.innerHTML += `<td>${role.name}</td>`;
+
+                // Formulaires lies avec des cases a cocher
+                const formTd = document.createElement('td');
+                forms.forEach(form => {
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = form.identifiant_formulaire;
+                    checkbox.checked = role.forms.some(f => f.identifiant_formulaire === form.identifiant_formulaire);
+                    checkbox.name = `role-${role.id}-form`;
+                    formTd.appendChild(checkbox);
+                    formTd.appendChild(document.createTextNode(` ${form.titre} `));
+                });
+                row.appendChild(formTd);
+
+                // Supprimer bouton
+                const deleteTd = document.createElement('td');
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Supprimer';
+                deleteBtn.onclick = () => deleteRole(role.id);
+                deleteTd.appendChild(deleteBtn);
+                row.appendChild(deleteTd);
+
+                // Appliquer modifications
+                const updateTd = document.createElement('td');
+                const updateBtn = document.createElement('button');
+                updateBtn.textContent = 'Mettre a jour';
+                updateBtn.onclick = () => {
+                    const selectedForms = [...formTd.querySelectorAll('input[type=checkbox]:checked')].map(cb => parseInt(cb.value));
+                    updateRoleForms(role.id, selectedForms);
+                };
+                updateTd.appendChild(updateBtn);
+                row.appendChild(updateTd);
+
+                tableBody.appendChild(row);
+            });
+
+            // Attach listeners
+            tableBody.querySelectorAll('.delete-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    await fetch(`/api/role/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                    });
+                    await loadRoles();
+                })
+            );
+
+            tableBody.querySelectorAll('.update-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    const input = tableBody.querySelector(`.role-name-input[data-id="${id}"]`);
+                    const newName = input.value.trim();
+
+                    await fetch(`/api/role/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name: newName })
+                    });
+
+                    await loadRoles();
+                })
+            );
+        }
+        (async () => {
+            await loadForms();
+            await loadRoles();
+        })();
+    </script>
+</body>
+</html>

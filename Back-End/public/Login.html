@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Connexion Admin</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="login-container">
+        <h2>Connexion Admin</h2>
+        <form id="login-form">
+            <input type="email" id="email" placeholder="Email" required />
+            <input type="password" id="password" placeholder="Mot de passe" required />
+            <button type="submit">Se connecter</button>
+            <p id="error-message" class="error"></p>
+        </form>
+        <a href="/reset">Mot de passe oublie</a>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            try {
+                const res = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('error-message').textContent = data.error || 'Erreur de connexion';
+                    return;
+                }
+
+                localStorage.setItem('token', data.token);
+
+                window.location.href = '/add_form';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('error-message').textContent = "Une erreur est survenue";
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+            width: 300px;
+            text-align: center;
+        }
+
+        input {
+            display: block;
+            margin: 1rem auto;
+            padding: 0.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 0.7rem;
+            width: 100%;
+            background-color: #28a745;
+            border: none;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .error {
+            color: red;
+            font-size: 0.9rem;
+        }
+    </style>
+</body>
+</html>
