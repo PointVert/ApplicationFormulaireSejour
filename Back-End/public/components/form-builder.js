@@ -79,7 +79,7 @@ class FormBuilder extends HTMLElement {
 
         formData.append('data', JSON.stringify(payload));
 
-        fetch('http://localhost:3000/api/forms', {
+        fetch('https://applicationformulairesejour.onrender.com/api/forms', {
             headers: {
                 'Authorization': 'Bearer ' + localStorage.getItem('token')
             },

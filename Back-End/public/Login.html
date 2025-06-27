@@ -25,7 +25,7 @@
             const password = document.getElementById('password').value.trim();
 
             try {
-                const res = await fetch('http://localhost:3000/api/login', {
+                const res = await fetch('https://applicationformulairesejour.onrender.com/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password }),

@@ -28,7 +28,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
 
-const val BASE_URL = "http://10.0.2.2:3000"
+const val BASE_URL = "https://applicationformulairesejour.onrender.com"
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var drawerLayout: DrawerLayout
